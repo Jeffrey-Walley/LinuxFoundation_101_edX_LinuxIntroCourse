@@ -1,0 +1,223 @@
+Linux edX course - Chapter 03 - Basics and System Startup
+  -- learn to identify Linux filesystem
+  -- identify differences between partitions and filesystems
+  -- describe 'boot' process
+  -- install linux
+
+
+'Boot' process- is the procedure for initializing the system 
+      (from powering system on until user interface is optional)
+  
+  Power On -> BIOS -> MBR (Master Boot Record) [aka 1st sector of HD] 
+    -> Boot Loader (eg: GRUB) -> Kernel (Linux OS) -> Initial RAM disk (initramfs image)
+    -> /sbin/init (parent process) -> Command Shell using getty -> X Windows (GUI) 
+    
+
+when first powered on the BIOS (Basic Input Output System) initializes the hardware including 
+   monitor, mouse, keyboard, and tests main memory this process is called the POST (Power on Self Test)
+ --the BIOS software is stored on a ROM chip on the MOBO after this the remainder of the boot process is controlled by the OS
+
+MBR (Master Boot Record) and Boot Loader
+  once the POST is complete the system control passes from the BIOS to the Boot Loader. the boot loader is strone on one f the HD in the system
+ either in the boot sector (for traditional BIOS/MBR systems) or the EFI partion for more recent (Unified Extensible Firmware Interface) [or EFI / UEFI system]
+
+up to this stage the system does not access any mass stroage media. afterwards the information on Date and Time are pulled from the CMOS values.
+
+there are multiple Boot Loaders for Linux:
+
+		--GRUB (GRand Unified Boot Loader)
+                --ISOLINUX (to boot from removable media)
+                --DAS U-BOOT (for booting from embedded devices/appliances)
+
+   most boot loaders present a user interface for choosing alternative options for booting Linux
+     -when booting Linux the boot loader is responsible for loading the kernel image and the inital RAM disk (or filesystem) into memory
+
+  at startup the MBR (Master Boot Record) searches for the Bootable HD Partition (searches for the GRUB) and loads it into memory
+
+
+  Boot Loader has 2 distinct stages:
+  --------------------------------- 
+    
+  1st Stage
+  ---------	
+    systems using the BIOS / MBR method have a MBR (Master Boot Record) that resides at the First Sector of the HD.
+     the MBR is 512 bytes large. the boot loader examines the partition tabele and finds the bootable partition. once the 
+     bootable partition is found it then searches for the Second stage boot loader (eg: GRUB) and loads it into RAM (Random Access Memory)
+
+    systems using the EFI / UEFI method, UEFI firmware reads its Boot Manager data to determine which UEFI application is to be launched and from where
+     (ie: from which disk and partition the EFI can be found) the firmware then launches the UEFI application (for example GRUB) as defined in the boot entry 
+         and the firmware's boot manager. The EFI / UEFI method is more complex, but more versitle than the older MBR method.
+
+   the 2nd Stage
+   -------------
+     second stage boot loader resides under /boot.  splash screen is diplayed which allows us to chose which OS to load into RAM and passes control to it. 
+      Kernals are almost always compressed, so the first job is to uncompress itself. after this it will check and analy the system hardware and initialize any
+      hardware device drivers built into the kernel.
+
+
+ Initial Ram Disk:
+ -----------------
+ initramfs filesystem image contains prograns and binary files that perform all actions needed to mount proper root filesystem. initramfs provides kernel functionality
+  for the needed filesystem and device driver for mass storage controllers with a facility called udev (User DEVice).
+   the UDEV is responsible for figuring out which devices are present, for locating device drivers to operate properly, and loading them. 
+  after the root filesystem has been found it is checkd for errors and mounted
+
+ mount programs instructs the OS that a filesystem is ready for use and associates it with a particular proint in the overall hierarchy of the filesystem (Mount Point) 
+   if this process is successful the 'initramfs' is cleared from RAM and the init program on the root filesystem is executed (/sbin/init)
+
+ init handles the mounting and pivoting over to the final real root filesystem. if special hardware drivers are needed before mass storage can be accesssed they must be in the 
+   'initramfs' image
+
+
+Text-Mode Login:
+----------------
+  near the end of the boot process init starts a number of text-mode login prompts. these enable you to type username, password and eventually get into the Command Shell.
+     however if you are runing a system with a graphical login interface you will not see these at first.
+
+    terminals with access the command shells can be acessed using the ALT key plus a function key. most distributions start six test terminals and one graphics terminal starting with F1 or F2
+      within a graphical environment switching to text console requres pressing CTRL-ALT + the appropriate function key (F7 or F1 leading to GUI)
+
+  the default shell is 'bash' (GNU Bourne Again SHell) but there are a number of other command shells available. shell prints a text prompt indicating it is ready to accept
+   commands. after the user types the command and presses ENTER the command is executed and another prompt is displayed after the command has been executed.
+
+
+Linux Kernel:
+-------------
+ boot loader loads both the kernel and initial-RAM-based file system (initramfs) into memory so it can be used directly by the Kernel
+
+when the kernel is loaded into RAM it immediately initializes and configures the computer's memory and also configures all the hardwared attached to the system.
+  this includes all processors, I/O subsystems, storage devices, and more. the kernel also loads some necessary user space applications. 
+
+
+/sbin/init:
+-----------
+ once the kernel has set up all it's hardwared and mount the root filesystem the kernel runs '/sbin/init'.  this then becomes the initial process, which then starts other processess
+ to get the system running. Most other process on the system trae ther origin ultimately to init.  [exceptions to that include 'kernel process' which are started by the kernel directly]
+
+ besides starting the system 'init' is responsible for keeping the system running and for shutting it down cleanly. one of the responsibilities is to act when necessary as a manager for 
+  all non-kernel processes; it cleans up after them upon completion and restarts user login services as needed when users log in an out and does the same for other background system services.
+  
+
+Startup Alternatives:
+---------------------
+ the 'SysVinit' was a serial process and did not take advantage of parallel processing that can be done on multi-core processors. furthermore shutdown and reboot was seen as relatively rare event; 
+      how long it took was not considered important. This is no longer true. Systems now requres methods with faster and enhanced capabilities. Finally the older mehtods requred rather complicated startup
+    scripts which were difficutl to keep universal across distribution versions, kernel versions, architecture, and types of systems. the 2 main alternatives developed were:
+
+'Upstart'- which was developed by Ubuntu and launched in 2006. later adopted in Fedora 9 and RHEL 6
+
+'systemd' -- adopted by Fedora in 2011, adopted in RHEL 7, replaced Upstart in Ubuntu 16.04
+
+the migration to 'systemd' was rather controversial, it has been adopted by all major distros and so will not discuss older SystemV or Upstart 
+
+
+'systemd':
+----------
+systemd starts up faster than those with earlier 'init' methods. largely because it replaces a serialized set of steps with aggressive parallelization techniques which permits multiple services to be initiated simultaneously
+
+complicated startup shell scripts replaces with simpler configuration files which enumerate what has to be done before a service is started, how to execute service startup, and what conditions the service should indicate 
+   have been accomplished when startup is finished. in modern systems '/sbin/init' simply points to /lib/systemd/systemd -- so systemd actually takes over the 'init' process
+ 
+the command 'systemct1' is used for most basic tasks
+
+  $ sudo systemct1 start | stop | restart httpd.service   [this would start, stop, and restart the Apache web server in this example]
+
+  $ sudo systemct1 enable | disable | httpd.service        [enable or disable a system service from starting at system boot]
+
+  -- in most cases the .service can be ommited 
+
+
+Linux Filesystems:
+------------------
+  the filesystem is used to store and organize arbitrary collections of data into human-usable forms.  
+ linux supports various filesystems:
+   - conventional disk filesystems: ext3, ext4, XFS, Btrfs, JFS, NTFS, vfat, exfat, etc. 
+   
+   - Flash storage filesystems: ubifs, jffs2, yaffs, etc.
+
+   - Database filesystems  
+
+   - special purpose filesystems: procfs, sysfs, tmpfs, squashfs, debugfs, fuse, etc.  
+
+
+Partitions and Filesystems:
+---------------------------
+  - partition is a physically contiguous section of a disk [or what appears to be so in some advanced setups]
+ 
+  - filesystem is a method of storing and finding files on a hard disk (usually in a partition)
+ 
+  the partition is the container that the filesystem resides, although in some cases a filesystem can span multiple containers using 'symbolic links'
+
+  below is a comparison between Windows and Linux filesystems:
+   
+   Partition-            Windows= Disk1            Linux= /dev/sda1
+   Filesytem Type-       NTFS/VFAT                 EXT3/EXT4/XFS/BTRFS
+   Mounting Parameters-  DriveLetter               MountPoint
+   Base Folder (OS)      C:\                       /
+
+
+Filesystem Hierarchy Standard:   https://refspecs.linuxfoundation.org/FHS_3.0/fhs-3.0.pdf
+------------------------------
+   Linux stores important files according to a standard layout called the FHS (File System Hierarchy) which has long been maintained by the Linux Foundation.
+ 
+  Linux uses '/' to seperate paths, unlike the '\' used in Windows. Linux does NOT have drive letters. Drives and partitions are mounted as directories the the single fielsystem. 
+
+   removable media will show up under: /run/media/*userName*/*removableMediaName*
+
+   Linux filesystem names ARE case sensitive. /boot, /Boot, & /BOOT would be 3 different locations
+
+
+Choosing the Linux Distro:
+--------------------------
+
+ Server- RHEL/CentOS, Ubuntu Server, SLES
+
+ Dektop- Ubuntu, Fedora, Linux Mint 
+
+ Embedded- Yocto, Open Embedded, Android
+
+   questions to ask when choosing distro:
+    - what is the function of the system (desktop vs server)?
+    - what packages are important to the orginization?
+    - What hardware is in the system? ARM, X86, PPC
+    - how much space and system resources are available on the system?
+    - how often are packages updated?
+    - how long is the support cycle for the release? LTS = Long Term Support
+    - Do yo need kernel customization from the vendor or a 3rd party?
+  
+   Figure out the Partition of the system you are installing on.
+   Distros come with the bare minimum software to run the distro. installers provide additional options for common software package downloads.
+
+
+Installing Linux:
+-----------------
+
+   see the PDF included in this folder re: preparing a computer for Linux training
+
+
+
+SUMMARY:
+--------
+
+  -Partition is a logical part of the disk.
+
+  -filesystem is a method of storing / finding files.
+  
+  -partitioning hard drives allows data to be grouped and seperated as needed
+
+  -boot process has multiple steps:  BIOS triggers the boot loader to start the kernel. 
+     from there the initramfs is invoked, which triggers the init to complete the startup
+
+  -there are multiple distros depending on what you need from your system
+
+
+  
+
+
+
+
+   
+  
+
+
+ 
